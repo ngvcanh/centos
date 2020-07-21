@@ -1,0 +1,50 @@
+ #!/bin/sh
+
+DIRECTORY=/etc/httpd/sites-enabled
+mkdir -p $DIRECTORY
+
+FILENAME=$DIRECTORY/$1.conf
+test -f $FILENAME || touch $FILENAME
+
+
+echo "<VirtualHost *:80>
+     ServerAdmin webmaster@$1
+     DocumentRoot $2
+     ServerName $1
+     ServerAlias $1
+
+    Options Indexes FollowSymLinks
+    Options -Indexes
+
+    <Directory \"$2\">
+      AllowOverride All
+      Order allow,deny
+          Allow from all
+      </Directory>
+</VirtualHost>
+<VirtualHost *:443>
+     ServerAdmin webmaster@$1
+     DocumentRoot $2
+     ServerName $1
+     ServerAlias $1
+
+         Options Indexes FollowSymLinks
+         Options -Indexes
+         #AllowOverride All
+
+         <Directory \"$2\">
+           AllowOverride All
+           Order allow,deny
+                    Allow from all
+           </Directory>
+</VirtualHost>" > $FILENAME
+
+mkdir -p $2
+
+echo -e "\e[32m \n ======== Config folder ======== \e[0m"
+ls -l $DIRECTORY
+
+echo -e "\e[32m \n ======== WWW site folder ======== \e[0m"
+ls -l $2/..
+
+systemctl restart httpd

@@ -1,0 +1,99 @@
+#!/bin/sh
+
+yum update & yum upgrade -y
+echo -e "\e[32m \n ======== Updated and upgraded server ======== \e[0m"
+
+# Install Apache
+yum install httpd  -y
+echo -e "\e[32m \n ======== Apache - httpd installed ======== \e[0m"
+
+systemctl start httpd
+echo -e "\e[32m \n ======== Apache started ======== \e[0m"
+
+systemctl enable httpd
+echo -e "\e[32m \n ======== Apache enabled ======== \e[0m"
+
+# Install PHP
+if [ $1 -eq 7 ] 
+then
+  yum install epel-release yum-utils -y
+  yum install http://rpms.remirepo.net/enterprise/remi-release-7.rpm -y
+  yum-config-manager --enable remi-php73
+  yum install php php-common php-opcache php-mcrypt php-cli php-gd php-curl php-mysqlnd -y
+  systemctl restart httpd
+  echo -e "\e[32m \n ======== PHP Version ======== \e[0m"
+  php -v
+else
+  yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm -y
+  yum install http://rpms.remirepo.net/enterprise/remi-release-7.rpm -y
+  yum install yum-utils -y
+  yum-config-manager --enable remi-php56
+  yum install php php-mcrypt php-cli php-gd php-curl php-mysql php-ldap php-zip php-fileinfo -y
+  systemctl restart httpd
+  echo -e "\e[32m \n ======== PHP Version ======== \e[0m"
+  php -v
+fi
+
+# Install MySQL
+yum install mariadb-server -y
+echo -e "\e[32m \n ======== MySQL installed ======== \e[0m"
+
+systemctl start mariadb
+echo -e "\e[32m \n ======== MySQL started ======== \e[0m"
+
+systemctl enable mariadb
+echo -e "\e[32m \n ======== MySQL enabled ======== \e[0m"
+
+# Install MySQL secure
+SECURE_MYSQL=$(expect -c "
+  set timeout 3
+  spawn mysql_secure_installation
+  expect \"Enter current password for root (enter for none):\"
+  send \"\r\"
+  expect \"Set root password? [Y/n]\"
+  send \"Y\r\"
+  expect \"New password:\"
+  send \"$2\r\"
+  expect \"Re-enter new password:\"
+  send \"$2\r\"
+  expect \"Remove anonymous users? [Y/n]\"
+  send \"Y\r\"
+  expect \"Disallow root login remotely? [Y/n]\"
+  send \"Y\r\"
+  expect \"Remove test database and access to it? [Y/n]\"
+  send \"Y\r\"
+  expect \"Reload privilege tables now? [Y/n]\"
+  send \"y\r\"
+  expect eof
+")
+
+# Execution mysql_secure_installation
+echo "${SECURE_MYSQL}"
+echo -e "\e[32m \n ======== MySQL secure installed ======== \e[0m"
+
+# Install firewall
+yum install firewalld -y
+echo -e "\e[32m \n ======== Firewall installed ======== \e[0m"
+
+firewall-cmd --permanent --add-service=http
+firewall-cmd --permanent --add-service=https
+echo -e "\e[32m \n ======== Firewall allowed HTTP and HTTPS ======== \e[0m"
+
+firewall-cmd --permanent --add-service=ssh
+echo -e "\e[32m \n ======== Firewall allowed SSH ======== \e[0m"
+
+firewall-cmd --reload
+echo -e "\e[32m \n ======== Firewall reloaded ======== \e[0m"
+
+systemctl enable firewalld
+echo -e "\e[32m \n ======== Firewall enabled ======== \e[0m"
+
+# Install PHPMyAdmin
+yum install phpmyadmin -y
+echo -e "\e[32m \n ======== PHPMyAdmin installed ======== \e[0m"
+
+mkdir -p /etc/httpd/sites-enabled
+echo "IncludeOptional sites-enabled/*.conf" >> /etc/httpd/conf/httpd.conf
+
+yum -y install mod_ssl
+systemctl restart httpd
